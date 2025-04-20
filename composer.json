@@ -1,0 +1,52 @@
+{
+    "name": "yorcreative/laravel-argonaut-dto",
+    "description": "Argonaut is a lightweight Data Transfer Object (DTO) package for Laravel that supports nested casting, recursive serialization, and validation out of the box. Ideal for service layers, APIs, and clean architecture workflows.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "laravel-package",
+        "dto",
+        "data-transfer-object",
+        "laravel-dto",
+        "php",
+        "php-dto",
+        "laravel-api",
+        "clean-architecture",
+        "value-objects",
+        "nested-dto",
+        "validation",
+        "serialization",
+        "laravel-architecture",
+        "service-layer",
+        "object-oriented-programming",
+        "architecture-patterns",
+        "solid-principles",
+        "backend-development"
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "^8.2|^8.3|^8.4",
+        "illuminate/contracts": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^9.0|^10.0|^11.5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "YorCreative\\LaravelArgonautDTO\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "YorCreative\\LaravelArgonautDTO\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "lint": "vendor/bin/pint",
+        "test": "vendor/bin/phpunit",
+        "coverage": "vendor/bin/phpunit --coverage-text"
+    }
+}

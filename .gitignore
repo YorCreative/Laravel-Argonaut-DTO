@@ -1,0 +1,7 @@
+./vendor
+.idea/Laravel-Argonaut.iml
+/.idea
+.phpunit.result.cache
+/vendor
+clover.xml
+.DS_Store
