@@ -1,5 +1,3 @@
-<br />
-<br />
 <div align="center">
   <a href="https://github.com/YorCreative">
     <img src="content/Laravel-Argonaut-DTO.png" alt="Logo" width="245" height="200">
@@ -17,7 +15,8 @@
 <a href="https://github.com/YorCreative/Laravel-Argonaut-DTO/actions/workflows/phpunit-tests.yml"><img alt="PHPUnit" src="https://github.com/YorCreative/Laravel-Argonaut-DTO/actions/workflows/phpunit-tests.yml/badge.svg"></a>
 </div>
 
-Laravel Argonaut DTO is a lightweight, highly composable package for transforming arrays, objects, or collections into structured DTOs (Data Transfer Objects), with built-in support for:
+Laravel Argonaut DTO is a lightweight, highly composable package for transforming arrays, objects, or collections into
+structured DTOs (Data Transfer Objects), with built-in support for:
 
 - 🧱 Deep nested transformation and casting
 - 🔁 Type-safe data conversion
@@ -74,6 +73,7 @@ This defines a strongly typed DTO with both validation rules and simple type cas
 Assemblers are responsible for mapping raw inputs (arrays or objects) into your DTOs.
 
 ```php
+// static usage example
 class UserDTOAssembler extends ArgonautAssembler
 {
     public static function toUserDTO(object $input): UserDTO
@@ -84,9 +84,26 @@ class UserDTOAssembler extends ArgonautAssembler
         ]);
     }
 }
+
+// instance usage example
+class UserDTOAssembler extends ArgonautAssembler
+{
+    public function __construct(protected UserFormattingService $formattingService) 
+    {
+        //
+    }
+    
+    public static function toUserDTO(object $input): UserDTO
+    {
+        return new UserDTO([
+            'username' => $formatingService->userName($input->display_name),
+            'email' => $formatingService->email($input->email),
+        ]);
+    }
+}
 ```
 
-> Assembler method names must follow the format `to<ClassName>`, and are resolved automatically using `class_basename`.
+> Assembler method names must follow the format `to<ClassName>` or `from<ClassName>`, and are resolved automatically using `class_basename`.
 
 ---
 
@@ -95,7 +112,14 @@ class UserDTOAssembler extends ArgonautAssembler
 Use the assembler to transform raw data into structured, casted DTO instances.
 
 ```php
+// static usage example
 $dto = UserDTOAssembler::assemble([
+    'display_name' => 'jdoe',
+    'email' => 'jdoe@example.com',
+], UserDTO::class);
+
+// instance usage example
+$dto = $userDTOAssemblerInstance->assembleInstance([
     'display_name' => 'jdoe',
     'email' => 'jdoe@example.com',
 ], UserDTO::class);
@@ -104,13 +128,22 @@ $dto = UserDTOAssembler::assemble([
 You can also batch transform arrays or collections:
 
 ```php
+// static usage
 UserDTOAssembler::fromArray($userArray, UserDTO::class);
 UserDTOAssembler::fromCollection($userCollection, UserDTO::class);
+
+// instance usage
+UserDTOAssembler::fromArray($userArray, UserDTO::class, $userDTOAssemblerInstance);
+UserDTOAssembler::fromCollection($userCollection, UserDTO::class, $userDTOAssemblerInstance);
+
+// or using the assembler instance's static methods
+$userDTOAssemblerInstance::fromArray($userArray, UserDTO::class, $userDTOAssemblerInstance);
+$userDTOAssemblerInstance::fromCollection($userCollection, UserDTO::class, $userDTOAssemblerInstance);
 ```
 
 ---
 
-## 🧪 Real-World Example: Product + Features + Reviews
+## 🧪 Real-World Static Usage Example: Product + Features + Reviews
 
 This example demonstrates nested relationships and complex type casting in action.
 
@@ -173,11 +206,155 @@ class ProductDTOAssembler extends ArgonautAssembler
 }
 ```
 
+## 🎯 Advanced: Dependency Injection in Assemblers
+
+ArgonautAssembler offers enhanced flexibility for your Assembler logic by supporting dependency injection. This allows
+you to leverage services or custom logic, whether defined in static or non-static methods, during the DTO assembly
+process. This is particularly powerful when integrating with Laravel's service container.
+
+This feature enables you to:
+
+- **Integrate Application Services:** Easily inject your existing application services (e.g., a custom formatting
+  utility, a validation service) directly into your assembler methods.
+- **Decouple Complex Logic:** Keep your assembler methods focused on the core task of data mapping by delegating more
+  complex operations or external data fetching/processing to injected dependencies.
+- **Improve Testability:** By injecting dependencies, you can more easily mock them in your unit tests, leading to more
+  robust and isolated tests for your assemblers.
+
+### How Dependency Injection Works
+
+`ArgonautAssembler` supports dependency injection in non-static transformation methods (e.g., `toUserDTO` or
+`fromUserDTO`) by leveraging Laravel’s service container. When you call `ArgonautAssembler::assemble()`,
+`fromCollection()`, `fromArray()`, or `assembleInstance()` with an instance of the assembler, the transformation method
+is invoked on that instance. Laravel’s container automatically resolves and injects any dependencies declared in the
+method’s signature.
+
+- **Static Methods:** Static transformation methods (e.g., `public static function toUserDTO($input)`) do not support
+  dependency injection, as they are called statically without an instance.
+- **Instance Methods:** Non-static transformation methods (e.g., `public function toUserDTO($input)`) are called on an
+  assembler instance, allowing Laravel to inject dependencies into the method.
+
+### Example: Using Dependency Injection
+
+Below is an example of an assembler with a non-static transformation method that uses dependency injection to format a
+user’s name via an injected service.
+
+```php
+<?php
+
+namespace App\Assemblers;
+
+use App\DTOs\UserDTO;
+use App\Services\UserFormattingService;
+use YorCreative\LaravelArgonautDTO\ArgonautAssembler;
+
+class UserAssembler extends ArgonautAssembler
+{
+    public function __construct(protected UserFormattingService $formattingService) 
+    {
+        //
+    }
+    
+    /**
+     * Transform input data into a UserDTO with dependency injection.
+     *
+     * @param object $input Input data (e.g., from a model or array cast to object).
+     * @param UserFormattingService $formatter Injected service for formatting user data.
+     * @return UserDTO
+     */
+    public function toUserDTO(object $input): UserDTO
+    {
+        return new UserDTO([
+            'full_name' => $formattingService->formatName($input->first_name, $input->last_name),
+            'email' => $input->email,
+            'created_at' => $input->created_at,
+        ]);
+    }
+}
+```
+
+### Registering the Assembler
+
+```php
+// ServiceProvider
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+
+class YourServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this->app->bind(FormattingServiceInterface::class, function($app) {
+            return new FormattingService();
+        })
+         $this->app->bind(YourArgonautAssembler::clas, function ($app) {
+             return new YourArgonautAssembler($app->get(FormattingServiceInterface::class));
+         });
+    }
+
+    public function provides()
+    {
+        return [
+               YourArgonautAssembler::class,
+               FormattingServiceInterface::class
+        ]       
+    }
+}
+```
+
+#### Using the Assembler
+
+To use the assembler with dependency injection, you need to provide an instance of the assembler to the `assemble`
+method or related methods (`fromCollection`, `fromArray`, or `assembleInstance`). Laravel’s container will resolve the
+dependencies when the method is invoked.
+
+```php
+<?php
+
+use App\Assemblers\UserAssembler;
+use App\DTOs\UserDTO;
+
+// Example input (e.g., a model or object)
+$input = (object) [
+    'first_name' => 'John',
+    'last_name' => 'Doe',
+    'email' => 'john.doe@example.com',
+    'created_at' => now(),
+];
+
+// Creating an assembler instance
+$formattingService = new UserFormattingService();
+$assembler = new UserAssembler($formattingService);
+// or using the container instance
+$assembler = resolve(YourArgonautAssembler::class);
+
+// Pass the $assembler instance 
+$userDTO = UserAssembler::assemble($input, UserDTO::class, $assembler);
+// Or use the instance method
+$userDTO = $assembler->assembleInstance($input, UserDTO::class);
+
+// Transform a collection passing the $assembler instance
+$array = [$input, $input];
+$collection = collect($array);
+$userDTOs = UserAssembler::fromCollection($collection, UserDTO::class, $assembler);
+$userDTOs = $assembler::fromArray($array, UserDTO::class, $assembler)
+```
+
+In this example:
+
+- The `toUserDTO` method requires a `UserFormattingService` dependency.
+- The assembler instance (`$assembler`) is passed to `assemble`, `fromArray` or `fromCollection`, ensuring the
+  non-static `toUserDTO` method is invoked on the instance.
+
 ---
 
-## 🎯 DTOs with Prioritized Attributes and Custom Setters
+## Advanced: 🎯 DTOs with Prioritized Attributes and Custom Setters
 
-ArgonautDTO allows you to prioritize the assignment of specific fields using `$prioritizedAttributes`, which is critical for cases where one field influences others.
+ArgonautDTO allows you to prioritize the assignment of specific fields using `$prioritizedAttributes`, which is critical
+for cases where one field influences others.
 
 ```php
 class UserDTO extends ArgonautDTO
@@ -237,13 +414,13 @@ protected array $casts = [
 ];
 ```
 
-| Cast Type              | Example                                           | Description                          |
-|------------------------|---------------------------------------------------|--------------------------------------|
-| Scalar                 | `'string'`, `'int'`, etc.                         | Native PHP type cast                 |
-| Single DTO             | `ProfileDTO::class`                               | Cast an array to a DTO instance      |
-| Array of DTOs          | `[RoleDTO::class]`                                | Cast to array of DTOs                |
-| Collection of DTOs     | `Collection::class . ':' . CommentDTO::class`     | Cast to a Laravel Collection         |
-| Date casting           | `Carbon::class`                                   | Cast to Carbon/DateTime instance     |
+| Cast Type          | Example                                       | Description                      |
+|--------------------|-----------------------------------------------|----------------------------------|
+| Scalar             | `'string'`, `'int'`, etc.                     | Native PHP type cast             |
+| Single DTO         | `ProfileDTO::class`                           | Cast an array to a DTO instance  |
+| Array of DTOs      | `[RoleDTO::class]`                            | Cast to array of DTOs            |
+| Collection of DTOs | `Collection::class . ':' . CommentDTO::class` | Cast to a Laravel Collection     |
+| Date casting       | `Carbon::class`                               | Cast to Carbon/DateTime instance |
 
 ---
 
