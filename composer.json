@@ -47,6 +47,7 @@
     "scripts": {
         "lint": "vendor/bin/pint",
         "test": "vendor/bin/phpunit",
-        "coverage": "vendor/bin/phpunit --coverage-text"
+        "coverage": "vendor/bin/phpunit --coverage-text",
+        "coverage-html": "vendor/bin/phpunit --coverage-html laravel-argonaut-dto"
     }
 }
