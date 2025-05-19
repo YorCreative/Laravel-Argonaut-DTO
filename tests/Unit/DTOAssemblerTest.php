@@ -4,6 +4,7 @@ namespace YorCreative\LaravelArgonautDTO\Tests\Unit;
 
 use Illuminate\Support\Collection;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\ProductDTOAssembler;
+use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\ProductDTOAssemblerInstance;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\UserDTOAssembler;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\FullNameDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductDTO;
@@ -11,6 +12,7 @@ use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductFeatureDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductReviewDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\UserDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\Models\TestEloquentModel;
+use YorCreative\LaravelArgonautDTO\Tests\Support\Services\ExampleService;
 use YorCreative\LaravelArgonautDTO\Tests\TestCase;
 
 class DTOAssemblerTest extends TestCase
@@ -187,5 +189,42 @@ class DTOAssemblerTest extends TestCase
 
         $this->assertInstanceOf(TestEloquentModel::class, $eloquentModel);
         $this->assertEquals($expected, $eloquentModel->foo);
+    }
+
+    public function test_it_can_assemble_and_assemble_instance()
+    {
+        $input = [
+            'bar' => 'not foo bar',
+        ];
+
+        $assembler = new ProductDTOAssemblerInstance($service = new ExampleService);
+        $eloquentModel = $assembler::assemble($input, TestEloquentModel::class, $assembler);
+
+        $this->assertInstanceOf(TestEloquentModel::class, $eloquentModel);
+        $this->assertEquals($service->foo(), $eloquentModel->foo);
+
+        $assembler->assembleInstance($input, TestEloquentModel::class);
+
+        $this->assertInstanceOf(TestEloquentModel::class, $eloquentModel);
+        $this->assertEquals($service->foo(), $eloquentModel->foo);
+    }
+
+    public function test_it_cannot_assemble_without_instance()
+    {
+        $DTO = ProductDTOAssemblerInstance::assemble($input = [
+            'name' => $featureName = 'Desk',
+            'subFeatures' => [
+                ['name' => $subFeatureName = 'Foldable', 'description' => 'Folds with ease!'],
+            ],
+        ], ProductFeatureDTO::class);
+
+        $this->assertInstanceOf(ProductFeatureDTO::class, $DTO);
+        $this->assertEquals($featureName, $DTO->name);
+        $this->assertCount(1, $DTO->subFeatures);
+        $this->assertEquals($subFeatureName, $DTO->subFeatures[0]->name);
+
+        $this->expectException(\BadFunctionCallException::class);
+        $assembler = new ProductDTOAssemblerInstance(new ExampleService);
+        $assembler::assemble($input, TestEloquentModel::class);
     }
 }
