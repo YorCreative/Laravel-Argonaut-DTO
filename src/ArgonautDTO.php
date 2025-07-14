@@ -22,6 +22,8 @@ class ArgonautDTO implements ArgonautDTOContract
 
     protected array $casts = [];
 
+    protected array $nestedAssemblers = [];
+
     protected static ?Factory $validatorFactory = null;
 
     public function __construct(array $attributes)
@@ -84,23 +86,64 @@ class ArgonautDTO implements ArgonautDTOContract
     }
 
     /**
-     * Casts the input value to a specific type based on the defined cast rules for the given key.
+     * Casts the given input value based on the defined type or nested assembler for the specified key.
      *
      * @param  string  $key  The key associated with the value to be cast.
-     * @param  mixed  $value  The value to be cast.
-     * @return mixed The result of casting the value, or the original value if no casting is applicable.
+     * @param  mixed  $value  The value to be cast, which can be of any type.
+     * @return mixed The cast value, potentially transformed into another type based on the cast definition.
      */
     protected function castInputValue(string $key, mixed $value): mixed
     {
         $cast = $this->casts[$key] ?? null;
 
+        $hasNestedAssembler = property_exists($this, 'nestedAssemblers') && isset($this->nestedAssemblers[$key]);
+
+        if ($hasNestedAssembler && $cast !== null) {
+            $assemblerClass = $this->nestedAssemblers[$key];
+
+            // Determine the target class and cast type upfront for efficiency
+            $targetClass = null;
+            $isMultiCast = false;
+
+            if (is_string($cast)) {
+                if (class_exists($cast)) {
+                    $targetClass = $cast;
+                } elseif (str_starts_with($cast, Collection::class.':')) {
+                    [, $targetClass] = explode(':', $cast, 2);
+                    $isMultiCast = true;
+                }
+            } elseif (is_array($cast) && isset($cast[0]) && class_exists($cast[0])) {
+                $targetClass = $cast[0];
+                $isMultiCast = true;
+            }
+
+            if ($targetClass !== null) {
+                if ($isMultiCast) {
+                    // For array/collection casts, apply to each item if iterable
+                    if (is_array($value)) {
+                        $value = array_map(function ($item) use ($assemblerClass, $targetClass) {
+                            return (is_array($item) || is_object($item)) ? $assemblerClass::assemble($item, $targetClass) : $item;
+                        }, $value);
+                    } elseif ($value instanceof Collection) {
+                        $value = $value->map(function ($item) use ($assemblerClass, $targetClass) {
+                            return (is_array($item) || is_object($item)) ? $assemblerClass::assemble($item, $targetClass) : $item;
+                        })->all();
+                    }
+                    // Skip if not iterable
+                } else {
+                    // For single casts
+                    if (is_array($value) || is_object($value)) {
+                        $value = $assemblerClass::assemble($value, $targetClass);
+                    }
+                    // Skip for scalars
+                }
+            }
+        }
+
         return match (true) {
             is_string($cast) && str_starts_with($cast, Collection::class.':') => $this->castToCollectionModel($cast, $value),
-
-            is_array($cast) && class_exists($cast[0]) => $this->castToArrayOfModels($cast[0], $value),
-
+            is_array($cast) && isset($cast[0]) && class_exists($cast[0]) => $this->castToArrayOfModels($cast[0], $value),
             is_string($cast) && class_exists($cast) => $this->castToSingleModel($cast, $value),
-
             default => $value,
         };
     }
