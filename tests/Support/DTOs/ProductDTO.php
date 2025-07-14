@@ -5,6 +5,7 @@ namespace YorCreative\LaravelArgonautDTO\Tests\Support\DTOs;
 use Illuminate\Database\Eloquent\Collection as DatabaseCollection;
 use Illuminate\Support\Collection;
 use YorCreative\LaravelArgonautDTO\ArgonautDTO;
+use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\UserDTOAssembler;
 
 class ProductDTO extends ArgonautDTO
 {
@@ -20,6 +21,10 @@ class ProductDTO extends ArgonautDTO
         'features' => [ProductFeatureDTO::class],
         'reviews' => Collection::class.':'.ProductReviewDTO::class,
         'user' => UserDTO::class,
+    ];
+
+    protected array $nestedAssemblers = [
+        'user' => UserDTOAssembler::class,
     ];
 
     public function rules(): array

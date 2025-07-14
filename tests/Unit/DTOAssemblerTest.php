@@ -58,7 +58,7 @@ class DTOAssemblerTest extends TestCase
         for ($x = 1; $x <= 3; $x++) {
             $collectionOfRawProducts->push([
                 'product_name' => fake()->domainName(),
-                'user' => ['username' => 'Test-user', 'email' => 'testuser@test.com'],
+                'user' => ['display_name' => 'Test-user', 'email' => 'testuser@test.com'],
                 'features' => [['name' => 'Height Adjustable', 'description' => 'The standing desk moves up and down!']],
                 'reviews' => [['displayName' => 'Test-user', 'rating' => rand(1, 5), 'comment' => 'Was okay']],
             ]);
@@ -81,6 +81,8 @@ class DTOAssemblerTest extends TestCase
                 $this->assertInstanceOf(ProductReviewDTO::class, $review);
             }
         }
+
+        $this->assertEquals('Test-user', $collectionOfProductDTOs[0]->user->username);
     }
 
     public function test_dto_assembler_throws_bad_function_exception()
@@ -113,7 +115,7 @@ class DTOAssemblerTest extends TestCase
     {
         $input = [
             'product_name' => 'Ultra Chair',
-            'user' => ['username' => 'array-user'],
+            'user' => ['display_name' => 'array-user', 'email' => 'test@user.com'],
             'features' => [],
             'reviews' => [],
         ];
@@ -226,5 +228,69 @@ class DTOAssemblerTest extends TestCase
         $this->expectException(\BadFunctionCallException::class);
         $assembler = new ProductDTOAssemblerInstance(new ExampleService);
         $assembler::assemble($input, TestEloquentModel::class);
+    }
+
+    public function test_nested_assembler_for_array_cast_field()
+    {
+        $featuresInput = [
+            (object) ['description' => 'No name description'],
+            ['description' => 'Another no name'],
+        ];
+
+        $attributes = [
+            'title' => 'Test Product',
+            'features' => $featuresInput,
+            'reviews' => [],
+            'user' => null,
+        ];
+
+        $refClass = new \ReflectionClass(ProductDTO::class);
+        $dto = $refClass->newInstanceWithoutConstructor();
+
+        $prop = $refClass->getProperty('nestedAssemblers');
+        $prop->setAccessible(true);
+        $prop->setValue($dto, ['features' => ProductDTOAssembler::class]);
+
+        $setAttributesMethod = $refClass->getMethod('setAttributes');
+        $setAttributesMethod->setAccessible(true);
+        $setAttributesMethod->invoke($dto, $attributes);
+
+        $this->assertIsArray($dto->features);
+        $this->assertCount(2, $dto->features);
+        $this->assertInstanceOf(ProductFeatureDTO::class, $dto->features[0]);
+        $this->assertSame('Unnamed Feature', $dto->features[0]->name);
+        $this->assertSame('Unnamed Feature', $dto->features[1]->name);
+    }
+
+    public function test_nested_assembler_with_collection_value()
+    {
+        $reviewsInput = collect([
+            ['rating' => 3],
+            (object) ['rating' => 4],
+        ]);
+
+        $attributes = [
+            'title' => 'Test Product',
+            'features' => [],
+            'reviews' => $reviewsInput,
+            'user' => null,
+        ];
+
+        $refClass = new \ReflectionClass(ProductDTO::class);
+        $dto = $refClass->newInstanceWithoutConstructor();
+
+        $prop = $refClass->getProperty('nestedAssemblers');
+        $prop->setAccessible(true);
+        $prop->setValue($dto, ['reviews' => ProductDTOAssembler::class]);
+
+        $setAttributesMethod = $refClass->getMethod('setAttributes');
+        $setAttributesMethod->setAccessible(true);
+        $setAttributesMethod->invoke($dto, $attributes);
+
+        $this->assertInstanceOf(Collection::class, $dto->reviews);
+        $this->assertCount(2, $dto->reviews);
+        $this->assertInstanceOf(ProductReviewDTO::class, $dto->reviews[0]);
+        $this->assertSame('', $dto->reviews[0]->comment);
+        $this->assertSame('', $dto->reviews[1]->comment);
     }
 }
