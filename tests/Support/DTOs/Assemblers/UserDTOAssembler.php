@@ -11,7 +11,7 @@ class UserDTOAssembler extends ArgonautAssembler
     public static function toUserDTO(object $input): UserDTO
     {
         return new UserDTO([
-            'username' => $input?->display_name,
+            'username' => $input?->display_name ?? $input?->username ?? $input->email,
             'firstName' => $input->first_name ?? null,
             'lastName' => $input->last_name ?? null,
             'email' => $input->email,

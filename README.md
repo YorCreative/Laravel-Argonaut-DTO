@@ -206,7 +206,7 @@ class ProductDTOAssembler extends ArgonautAssembler
 }
 ```
 
-## 🎯 Advanced: Dependency Injection in Assemblers
+## 🎯 Dependency Injection in Assemblers
 
 ArgonautAssembler offers enhanced flexibility for your Assembler logic by supporting dependency injection. This allows
 you to leverage services or custom logic, whether defined in static or non-static methods, during the DTO assembly
@@ -351,7 +351,83 @@ In this example:
 
 ---
 
-## Advanced: 🎯 DTOs with Prioritized Attributes and Custom Setters
+# 🎯 Nested Assemblers for Deep Transformations
+
+Nested assemblers enhance the casting process by allowing you to specify an assembler class for individual fields in your DTO. When a value is assigned to that field during construction or attribute setting, the raw input is first passed through the assembler's transformation method (e.g., `toUserDTO`) before the cast is applied. This is ideal for handling complex, nested data structures where raw inputs need preprocessing or mapping.
+
+Nested assemblers integrate seamlessly with casting:
+- For single casts (e.g., `UserDTO::class`), the assembler transforms the input value directly.
+- For array or collection casts (e.g., `[ProductFeatureDTO::class]` or `Collection::class . ':' . ProductReviewDTO::class`), the assembler is applied to each item in the iterable value.
+- Assemblers used in nested contexts must have static transformation methods, as they are invoked statically without an instance.
+
+### Defining Nested Assemblers
+
+Add a `protected array $nestedAssemblers` property to your DTO, mapping field names to assembler classes:
+
+```php
+class ProductDTO extends ArgonautDTO
+{
+    public string $title;
+    public array $features;
+    public Collection $reviews;
+    public ?UserDTO $user = null;
+
+    protected array $casts = [
+        'features' => [ProductFeatureDTO::class],
+        'reviews' => Collection::class . ':' . ProductReviewDTO::class,
+        'user' => UserDTO::class,
+    ];
+
+    protected array $nestedAssemblers = [
+        'user' => UserDTOAssembler::class
+    ];
+
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string'],
+            'reviews' => ['sometimes', 'required', 'collection', 'min:1'],
+        ];
+    }
+}
+```
+
+In this example:
+- The `user` field will use `UserDTOAssembler::toUserDTO()` (or `fromUserDTO()`) to transform raw input (e.g., an array or object with `display_name` and `email`) before casting it to a `UserDTO` instance.
+- If added, `features` or `reviews` would apply the assembler to each item in the array/collection.
+
+### How It Works
+
+When setting attributes (via constructor or `setAttributes`):
+1. If a nested assembler is defined for the key and a cast exists, the assembler transforms the value (or each item for iterables).
+2. The transformed value is then cast according to `$casts` (e.g., into a DTO, collection, etc.).
+3. Scalars (non-array/object values) skip the assembler to avoid type errors.
+
+This ensures deep, automatic transformations while maintaining type safety and structure.
+
+### Example Usage
+
+With the above `ProductDTO` and a raw input:
+
+```php
+$rawProduct = [
+    'title' => 'Standing Desk',
+    'user' => ['display_name' => 'jdoe', 'email' => 'jdoe@example.com'],
+    'features' => [['name' => 'Height Adjustable']],
+    'reviews' => [['rating' => 5, 'comment' => 'Great!']],
+];
+
+$productDTO = ProductDTOAssembler::assemble($rawProduct, ProductDTO::class);
+
+// $productDTO->user is now a fully assembled UserDTO instance
+$this->assertInstanceOf(UserDTO::class, $productDTO->user);
+$this->assertSame('jdoe', $productDTO->user->username);
+```
+
+Nested assemblers promote composability, making it easier to handle multi-layered data in APIs, services, or complex domain logic.
+---
+
+## 🎯 DTOs with Prioritized Attributes and Custom Setters
 
 ArgonautDTO allows you to prioritize the assignment of specific fields using `$prioritizedAttributes`, which is critical
 for cases where one field influences others.
