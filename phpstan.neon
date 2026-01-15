@@ -1,0 +1,11 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - vendor
+    ignoreErrors:
+        # Our toArray() method accepts an optional depth parameter, which extends the interface
+        - '#Method Illuminate\\Contracts\\Support\\Arrayable.*::toArray\(\) invoked with 1 parameter, 0 required#'
+        # Using new static() is a common Laravel pattern for DTOs
+        - '#Unsafe usage of new static\(\)#'

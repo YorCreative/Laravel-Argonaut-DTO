@@ -3,6 +3,7 @@
 namespace YorCreative\LaravelArgonautDTO\Tests\Unit;
 
 use Illuminate\Support\Collection;
+use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\FromPatternAssembler;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\ProductDTOAssembler;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\ProductDTOAssemblerInstance;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\Assemblers\UserDTOAssembler;
@@ -292,5 +293,30 @@ class DTOAssemblerTest extends TestCase
         $this->assertInstanceOf(ProductReviewDTO::class, $dto->reviews[0]);
         $this->assertSame('', $dto->reviews[0]->comment);
         $this->assertSame('', $dto->reviews[1]->comment);
+    }
+
+    public function test_assembler_resolves_from_method_pattern(): void
+    {
+        $dto = FromPatternAssembler::assemble(
+            ['name' => 'test-user', 'email' => 'test@example.com'],
+            UserDTO::class
+        );
+
+        $this->assertInstanceOf(UserDTO::class, $dto);
+        $this->assertSame('test-user', $dto->username);
+        $this->assertSame('test@example.com', $dto->email);
+    }
+
+    public function test_assembler_from_pattern_with_array(): void
+    {
+        $users = FromPatternAssembler::fromArray([
+            ['name' => 'user1', 'email' => 'user1@example.com'],
+            ['name' => 'user2', 'email' => 'user2@example.com'],
+        ], UserDTO::class);
+
+        $this->assertInstanceOf(Collection::class, $users);
+        $this->assertCount(2, $users);
+        $this->assertSame('user1', $users[0]->username);
+        $this->assertSame('user2', $users[1]->username);
     }
 }

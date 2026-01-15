@@ -60,7 +60,7 @@ jobs:
         run: sudo apt-get update --fix-missing
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -82,3 +82,7 @@ jobs:
       - name: Execute tests
         if: matrix.skip != 'true'
         run: vendor/bin/phpunit --testdox
+
+      - name: Run PHPStan
+        if: matrix.skip != 'true'
+        run: vendor/bin/phpstan analyse --memory-limit=512M --no-progress
