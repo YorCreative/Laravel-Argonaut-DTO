@@ -20,9 +20,10 @@ structured DTOs (Data Transfer Objects), with built-in support for:
 
 - 🧱 Deep nested transformation and casting
 - 🔁 Type-safe data conversion
-- ✅ Validation using Laravel’s validator
+- ✅ Validation using Laravel's validator
 - 🧠 Explicit attribute prioritization
 - 📦 Clean serialization (`toArray`, `toJson`)
+- 🔒 Immutable DTOs with readonly properties
 - ♻️ Consistent data shape enforcement across boundaries
 
 ---
@@ -88,16 +89,16 @@ class UserDTOAssembler extends ArgonautAssembler
 // instance usage example
 class UserDTOAssembler extends ArgonautAssembler
 {
-    public function __construct(protected UserFormattingService $formattingService) 
+    public function __construct(protected UserFormattingService $formattingService)
     {
         //
     }
-    
-    public static function toUserDTO(object $input): UserDTO
+
+    public function toUserDTO(object $input): UserDTO
     {
         return new UserDTO([
-            'username' => $formatingService->userName($input->display_name),
-            'email' => $formatingService->email($input->email),
+            'username' => $this->formattingService->userName($input->display_name),
+            'email' => $this->formattingService->email($input->email),
         ]);
     }
 }
@@ -265,7 +266,7 @@ class UserAssembler extends ArgonautAssembler
     public function toUserDTO(object $input): UserDTO
     {
         return new UserDTO([
-            'full_name' => $formattingService->formatName($input->first_name, $input->last_name),
+            'full_name' => $this->formattingService->formatName($input->first_name, $input->last_name),
             'email' => $input->email,
             'created_at' => $input->created_at,
         ]);
@@ -287,20 +288,20 @@ class YourServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->app->bind(FormattingServiceInterface::class, function($app) {
+        $this->app->bind(FormattingServiceInterface::class, function ($app) {
             return new FormattingService();
-        })
-         $this->app->bind(YourArgonautAssembler::clas, function ($app) {
-             return new YourArgonautAssembler($app->get(FormattingServiceInterface::class));
-         });
+        });
+        $this->app->bind(YourArgonautAssembler::class, function ($app) {
+            return new YourArgonautAssembler($app->get(FormattingServiceInterface::class));
+        });
     }
 
     public function provides()
     {
         return [
-               YourArgonautAssembler::class,
-               FormattingServiceInterface::class
-        ]       
+            YourArgonautAssembler::class,
+            FormattingServiceInterface::class,
+        ];
     }
 }
 ```
@@ -340,7 +341,7 @@ $userDTO = $assembler->assembleInstance($input, UserDTO::class);
 $array = [$input, $input];
 $collection = collect($array);
 $userDTOs = UserAssembler::fromCollection($collection, UserDTO::class, $assembler);
-$userDTOs = $assembler::fromArray($array, UserDTO::class, $assembler)
+$userDTOs = $assembler::fromArray($array, UserDTO::class, $assembler);
 ```
 
 In this example:
@@ -425,6 +426,137 @@ $this->assertSame('jdoe', $productDTO->user->username);
 ```
 
 Nested assemblers promote composability, making it easier to handle multi-layered data in APIs, services, or complex domain logic.
+
+---
+
+## 🔒 Immutable DTOs
+
+For scenarios where data integrity is critical, `ArgonautImmutableDTO` provides a base class for creating DTOs with readonly properties that cannot be modified after construction.
+
+### When to Use Immutable DTOs
+
+- **API Responses**: Ensure response data remains unchanged throughout the request lifecycle
+- **Event Sourcing**: Immutable events that represent facts that happened
+- **Value Objects**: Data that should never change once created
+- **Thread Safety**: Prevent accidental mutations in concurrent operations
+- **Functional Patterns**: Enable predictable, side-effect-free code
+
+### Defining an Immutable DTO
+
+```php
+use YorCreative\LaravelArgonautDTO\ArgonautImmutableDTO;
+use Illuminate\Support\Carbon;
+
+class UserDTO extends ArgonautImmutableDTO
+{
+    public readonly string $username;
+    public readonly string $email;
+    public readonly ?string $firstName;
+    public readonly ?string $lastName;
+    public readonly ?Carbon $registeredAt;
+
+    protected array $casts = [
+        'registeredAt' => Carbon::class,
+    ];
+
+    public function rules(): array
+    {
+        return [
+            'username' => ['required', 'string', 'max:64'],
+            'email' => ['required', 'email', 'max:255'],
+        ];
+    }
+}
+```
+
+### Usage
+
+```php
+// Create an immutable DTO - works exactly like ArgonautDTO
+$user = new UserDTO([
+    'username' => 'jdoe',
+    'email' => 'jdoe@example.com',
+    'firstName' => 'John',
+    'lastName' => 'Doe',
+    'registeredAt' => '2024-01-15 10:30:00',
+]);
+
+// Access properties normally
+echo $user->username;        // 'jdoe'
+echo $user->registeredAt;    // Carbon instance
+
+// Serialization works the same
+$array = $user->toArray();
+$json = $user->toJson();
+
+// Validation works the same
+$user->validate();
+$user->isValid();
+
+// Attempting to modify throws an Error
+$user->username = 'other';   // ❌ Error: Cannot modify readonly property
+```
+
+### Immutable DTOs with Assemblers
+
+Immutable DTOs work seamlessly with assemblers:
+
+```php
+class UserDTOAssembler extends ArgonautAssembler
+{
+    public static function toUserDTO(object $input): UserDTO
+    {
+        return new UserDTO([
+            'username' => $input->display_name,
+            'email' => $input->email,
+            'firstName' => $input->first_name ?? null,
+            'lastName' => $input->last_name ?? null,
+        ]);
+    }
+}
+
+// Works exactly the same as mutable DTOs
+$user = UserDTOAssembler::assemble($input, UserDTO::class);
+$users = UserDTOAssembler::fromArray($userArray, UserDTO::class);
+$users = UserDTOAssembler::fromCollection($userCollection, UserDTO::class);
+```
+
+### Nested Immutable DTOs
+
+Immutable DTOs support all casting features including nested DTOs:
+
+```php
+class OrderDTO extends ArgonautImmutableDTO
+{
+    public readonly string $orderId;
+    public readonly UserDTO $customer;           // Single nested DTO
+    public readonly array $items;                // Array of DTOs
+    public readonly Collection $payments;        // Collection of DTOs
+
+    protected array $casts = [
+        'customer' => UserDTO::class,
+        'items' => [OrderItemDTO::class],
+        'payments' => Collection::class . ':' . PaymentDTO::class,
+    ];
+}
+```
+
+### Comparison: Mutable vs Immutable
+
+| Feature | `ArgonautDTO` | `ArgonautImmutableDTO` |
+|---------|---------------|------------------------|
+| Property modification | ✅ Allowed | ❌ Blocked (readonly) |
+| Custom setters | ✅ `setPropertyName()` | ❌ Not supported |
+| `setAttributes()` | ✅ Available | ❌ Not available |
+| Casting | ✅ Full support | ✅ Full support |
+| Validation | ✅ Full support | ✅ Full support |
+| Serialization | ✅ Full support | ✅ Full support |
+| Assembler integration | ✅ Full support | ✅ Full support |
+| Nested assemblers | ✅ Full support | ✅ Full support |
+| PHP requirement | 8.2+ | 8.2+ (readonly properties) |
+
+> **Note**: Choose `ArgonautDTO` when you need mutable objects with custom setters. Choose `ArgonautImmutableDTO` when you want guaranteed immutability and don't need post-construction modifications.
+
 ---
 
 ## 🎯 DTOs with Prioritized Attributes and Custom Setters
@@ -537,10 +669,28 @@ UserDTO::collection([
 
 ## 🧪 Testing
 
-Run the test suite using:
+Run the test suite:
 
 ```bash
 composer test
+```
+
+Run tests with coverage report:
+
+```bash
+composer coverage
+```
+
+Run static analysis (PHPStan):
+
+```bash
+composer phpstan
+```
+
+Run code style fixer (Pint):
+
+```bash
+composer lint
 ```
 
 ---

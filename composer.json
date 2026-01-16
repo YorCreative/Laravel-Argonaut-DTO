@@ -27,12 +27,13 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": "^8.2|^8.3|^8.4",
+        "php": "^8.2|^8.3|^8.4|^8.5",
         "illuminate/contracts": "^10.0|^11.0|^12.0"
     },
     "require-dev": {
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0",
+        "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^9.0|^10.0|^11.5.3"
     },
     "autoload": {
@@ -49,6 +50,7 @@
         "lint": "vendor/bin/pint",
         "test": "vendor/bin/phpunit",
         "coverage": "vendor/bin/phpunit --coverage-text",
-        "coverage-html": "vendor/bin/phpunit --coverage-html laravel-argonaut-dto"
+        "coverage-html": "vendor/bin/phpunit --coverage-html laravel-argonaut-dto",
+        "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M"
     }
 }
