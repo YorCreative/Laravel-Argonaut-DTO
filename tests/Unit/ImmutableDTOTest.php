@@ -5,10 +5,13 @@ namespace YorCreative\LaravelArgonautDTO\Tests\Unit;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ImmutableEnumDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ImmutableProductDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ImmutableUserDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductFeatureDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductReviewDTO;
+use YorCreative\LaravelArgonautDTO\Tests\Support\Enums\PriorityEnum;
+use YorCreative\LaravelArgonautDTO\Tests\Support\Enums\StatusEnum;
 use YorCreative\LaravelArgonautDTO\Tests\TestCase;
 
 class ImmutableDTOTest extends TestCase
@@ -238,5 +241,72 @@ class ImmutableDTOTest extends TestCase
         $result = $user->toArray(depth: 0);
 
         $this->assertSame([], $result);
+    }
+
+    public function test_only_returns_filtered_array(): void
+    {
+        $dto = new ImmutableUserDTO([
+            'email' => 'test@example.com',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'username' => 'jdoe',
+        ]);
+        $result = $dto->only('email', 'firstName');
+        $this->assertArrayHasKey('email', $result);
+        $this->assertArrayHasKey('firstName', $result);
+        $this->assertArrayNotHasKey('lastName', $result);
+    }
+
+    public function test_except_returns_filtered_array(): void
+    {
+        $dto = new ImmutableUserDTO([
+            'email' => 'test@example.com',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'username' => 'jdoe',
+        ]);
+        $result = $dto->except('email');
+        $this->assertArrayNotHasKey('email', $result);
+        $this->assertArrayHasKey('firstName', $result);
+        $this->assertArrayHasKey('lastName', $result);
+    }
+
+    public function test_casts_string_backed_enum_on_readonly_property(): void
+    {
+        $dto = new ImmutableEnumDTO(['status' => 'active', 'name' => 'Test']);
+
+        $this->assertInstanceOf(StatusEnum::class, $dto->status);
+        $this->assertSame(StatusEnum::Active, $dto->status);
+    }
+
+    public function test_casts_int_backed_enum_on_readonly_property(): void
+    {
+        $dto = new ImmutableEnumDTO(['priority' => 2]);
+
+        $this->assertInstanceOf(PriorityEnum::class, $dto->priority);
+        $this->assertSame(PriorityEnum::Medium, $dto->priority);
+    }
+
+    public function test_passes_through_existing_enum_instance_on_readonly_property(): void
+    {
+        $dto = new ImmutableEnumDTO(['status' => StatusEnum::Inactive]);
+
+        $this->assertSame(StatusEnum::Inactive, $dto->status);
+    }
+
+    public function test_serializes_readonly_enum_to_backing_value(): void
+    {
+        $dto = new ImmutableEnumDTO(['status' => 'active', 'priority' => 3, 'name' => 'Test']);
+        $array = $dto->toArray();
+
+        $this->assertSame('active', $array['status']);
+        $this->assertSame(3, $array['priority']);
+    }
+
+    public function test_throws_value_error_for_invalid_enum_on_readonly_property(): void
+    {
+        $this->expectException(\ValueError::class);
+
+        new ImmutableEnumDTO(['status' => 'invalid']);
     }
 }

@@ -63,6 +63,19 @@ class ArgonautDTO implements ArgonautDTOContract
     }
 
     /**
+     * Merge the given attributes into this DTO, updating existing values.
+     *
+     * @param  array  $attributes  Associative array of attributes to merge.
+     * @return static The current instance with updated attributes.
+     */
+    public function merge(array $attributes): static
+    {
+        $this->setAttributes($attributes);
+
+        return $this;
+    }
+
+    /**
      * Retrieves the attributes of the object that should be updated, excluding specific properties.
      *
      * @return array The filtered attributes to update.
@@ -70,11 +83,9 @@ class ArgonautDTO implements ArgonautDTOContract
     public function getAttributesToUpdate(): array
     {
         $attributes = get_object_vars($this);
-        unset(
-            $attributes['prioritizedAttributes'],
-            $attributes['casts'],
-            $attributes['nestedAssemblers']
-        );
+        foreach ($this->getExcludedSerializationProperties() as $prop) {
+            unset($attributes[$prop]);
+        }
 
         return $attributes;
     }

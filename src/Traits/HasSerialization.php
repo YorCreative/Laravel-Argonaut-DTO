@@ -28,6 +28,9 @@ trait HasSerialization
      */
     protected function castOutputValue(mixed $value, int $depth = 3): mixed
     {
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
 
         if ($value instanceof ArgonautDTOContract) {
             return $value->toArray($depth);
@@ -79,6 +82,28 @@ trait HasSerialization
         }
 
         throw new RuntimeException('JSON error: '.json_last_error_msg());
+    }
+
+    /**
+     * Serialize only the specified properties.
+     *
+     * @param  string  ...$keys  Property names to include.
+     * @return array Filtered array containing only the specified keys.
+     */
+    public function only(string ...$keys): array
+    {
+        return array_intersect_key($this->toArray(), array_flip($keys));
+    }
+
+    /**
+     * Serialize all properties except the specified ones.
+     *
+     * @param  string  ...$keys  Property names to exclude.
+     * @return array Filtered array excluding the specified keys.
+     */
+    public function except(string ...$keys): array
+    {
+        return array_diff_key($this->toArray(), array_flip($keys));
     }
 
     /**

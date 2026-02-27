@@ -5,11 +5,14 @@ namespace YorCreative\LaravelArgonautDTO\Tests\Unit;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\EnumDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\InvalidDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductFeatureDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\ProductReviewDTO;
 use YorCreative\LaravelArgonautDTO\Tests\Support\DTOs\UserDTO;
+use YorCreative\LaravelArgonautDTO\Tests\Support\Enums\PriorityEnum;
+use YorCreative\LaravelArgonautDTO\Tests\Support\Enums\StatusEnum;
 use YorCreative\LaravelArgonautDTO\Tests\TestCase;
 
 class DTOTest extends TestCase
@@ -252,5 +255,83 @@ class DTOTest extends TestCase
         ]);
 
         $this->assertFalse($user->isValid(true));
+    }
+
+    public function test_it_can_cast_string_backed_enum_from_raw_value(): void
+    {
+        $dto = new EnumDTO(['status' => 'active', 'name' => 'Test']);
+        $this->assertInstanceOf(StatusEnum::class, $dto->status);
+        $this->assertSame(StatusEnum::Active, $dto->status);
+    }
+
+    public function test_it_can_cast_int_backed_enum_from_raw_value(): void
+    {
+        $dto = new EnumDTO(['priority' => 2]);
+        $this->assertInstanceOf(PriorityEnum::class, $dto->priority);
+        $this->assertSame(PriorityEnum::Medium, $dto->priority);
+    }
+
+    public function test_it_passes_through_existing_enum_instance(): void
+    {
+        $dto = new EnumDTO(['status' => StatusEnum::Inactive]);
+        $this->assertSame(StatusEnum::Inactive, $dto->status);
+    }
+
+    public function test_it_serializes_enum_to_backing_value(): void
+    {
+        $dto = new EnumDTO(['status' => 'active', 'priority' => 3, 'name' => 'Test']);
+        $array = $dto->toArray();
+        $this->assertSame('active', $array['status']);
+        $this->assertSame(3, $array['priority']);
+    }
+
+    public function test_it_throws_value_error_for_invalid_enum_value(): void
+    {
+        $this->expectException(\ValueError::class);
+        new EnumDTO(['status' => 'invalid']);
+    }
+
+    public function test_only_returns_filtered_array(): void
+    {
+        $dto = new UserDTO([
+            'email' => 'test@example.com',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+        ]);
+        $result = $dto->only('email', 'firstName');
+        $this->assertArrayHasKey('email', $result);
+        $this->assertArrayHasKey('firstName', $result);
+        $this->assertArrayNotHasKey('lastName', $result);
+    }
+
+    public function test_except_returns_filtered_array(): void
+    {
+        $dto = new UserDTO([
+            'email' => 'test@example.com',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+        ]);
+        $result = $dto->except('email');
+        $this->assertArrayNotHasKey('email', $result);
+        $this->assertArrayHasKey('firstName', $result);
+        $this->assertArrayHasKey('lastName', $result);
+    }
+
+    public function test_merge_updates_attributes(): void
+    {
+        $dto = new UserDTO([
+            'email' => 'old@example.com',
+            'firstName' => 'John',
+        ]);
+        $dto->merge(['email' => 'new@example.com']);
+        $this->assertSame('new@example.com', $dto->email);
+        $this->assertSame('John', $dto->firstName);
+    }
+
+    public function test_merge_returns_same_instance(): void
+    {
+        $dto = new UserDTO(['email' => 'test@example.com']);
+        $result = $dto->merge(['firstName' => 'Jane']);
+        $this->assertSame($dto, $result);
     }
 }

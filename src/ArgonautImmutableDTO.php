@@ -72,7 +72,7 @@ abstract class ArgonautImmutableDTO implements ArgonautDTOContract
      */
     protected function isInternalProperty(string $key): bool
     {
-        return in_array($key, ['casts', 'nestedAssemblers', 'validatorFactory']);
+        return in_array($key, $this->getExcludedSerializationProperties());
     }
 
     /**

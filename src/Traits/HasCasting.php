@@ -69,6 +69,7 @@ trait HasCasting
         }
 
         return match (true) {
+            is_string($cast) && is_subclass_of($cast, \BackedEnum::class) => $this->castToEnum($cast, $value),
             is_string($cast) && str_starts_with($cast, Collection::class.':') => $this->castToCollectionModel($cast, $value),
             is_array($cast) && isset($cast[0]) && class_exists($cast[0]) => $this->castToArrayOfModels($cast[0], $value),
             is_string($cast) && class_exists($cast) => $this->castToSingleModel($cast, $value),
@@ -93,7 +94,9 @@ trait HasCasting
             throw new InvalidArgumentException("$value must be an array to cast to a collection.");
         }
 
-        return collect($value)->map(fn ($item) => $item instanceof $class ? $item : new $class($item));
+        return collect($value)->map(fn ($item) => $item instanceof $class
+            ? $item
+            : (is_subclass_of($class, \BackedEnum::class) ? $class::from($item) : new $class($item)));
     }
 
     /**
@@ -105,7 +108,9 @@ trait HasCasting
      */
     protected function castToArrayOfModels(string $class, array $value): array
     {
-        return array_map(fn ($item) => $item instanceof $class ? $item : new $class($item), $value);
+        return array_map(fn ($item) => $item instanceof $class
+            ? $item
+            : (is_subclass_of($class, \BackedEnum::class) ? $class::from($item) : new $class($item)), $value);
     }
 
     /**
@@ -122,5 +127,21 @@ trait HasCasting
         }
 
         return $value instanceof $class ? $value : new $class($value);
+    }
+
+    /**
+     * Casts a value to a BackedEnum instance.
+     *
+     * @param  string  $enumClass  The fully qualified BackedEnum class name.
+     * @param  mixed  $value  The value to cast.
+     * @return \BackedEnum The enum instance.
+     */
+    protected function castToEnum(string $enumClass, mixed $value): \BackedEnum
+    {
+        if ($value instanceof $enumClass) {
+            return $value;
+        }
+
+        return $enumClass::from($value);
     }
 }
