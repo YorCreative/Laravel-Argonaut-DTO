@@ -547,10 +547,10 @@ class OrderDTO extends ArgonautImmutableDTO
 |---------|---------------|------------------------|
 | Property modification | ✅ Allowed | ❌ Blocked (readonly) |
 | Custom setters | ✅ `setPropertyName()` | ❌ Not supported |
-| `setAttributes()` | ✅ Available | ❌ Not available |
-| Casting | ✅ Full support | ✅ Full support |
+| `setAttributes()` / `merge()` | ✅ Available | ❌ Not available |
+| Casting (DTOs, enums, dates) | ✅ Full support | ✅ Full support |
 | Validation | ✅ Full support | ✅ Full support |
-| Serialization | ✅ Full support | ✅ Full support |
+| Serialization (`toArray`, `toJson`, `only`, `except`) | ✅ Full support | ✅ Full support |
 | Assembler integration | ✅ Full support | ✅ Full support |
 | Nested assemblers | ✅ Full support | ✅ Full support |
 | PHP requirement | 8.2+ | 8.2+ (readonly properties) |
@@ -611,7 +611,7 @@ class UserDTO extends ArgonautDTO
 
 ## 🔁 Casting Reference
 
-Casting allows you to automatically transform values into other DTOs, Laravel Collections, arrays, dates, and more.
+Casting allows you to automatically transform values into other DTOs, Laravel Collections, arrays, dates, enums, and more.
 
 ```php
 protected array $casts = [
@@ -619,16 +619,42 @@ protected array $casts = [
     'profile' => ProfileDTO::class,
     'roles' => [RoleDTO::class],
     'permissions' => Collection::class . ':' . PermissionDTO::class,
+    'status' => StatusEnum::class,
+    'tags' => [TagEnum::class],
+    'priorities' => Collection::class . ':' . PriorityEnum::class,
 ];
 ```
 
-| Cast Type          | Example                                       | Description                      |
-|--------------------|-----------------------------------------------|----------------------------------|
-| Scalar             | `'string'`, `'int'`, etc.                     | Native PHP type cast             |
-| Single DTO         | `ProfileDTO::class`                           | Cast an array to a DTO instance  |
-| Array of DTOs      | `[RoleDTO::class]`                            | Cast to array of DTOs            |
-| Collection of DTOs | `Collection::class . ':' . CommentDTO::class` | Cast to a Laravel Collection     |
-| Date casting       | `Carbon::class`                               | Cast to Carbon/DateTime instance |
+| Cast Type               | Example                                           | Description                             |
+|-------------------------|---------------------------------------------------|-----------------------------------------|
+| Single DTO              | `ProfileDTO::class`                               | Cast an array to a DTO instance         |
+| Array of DTOs           | `[RoleDTO::class]`                                | Cast to array of DTOs                   |
+| Collection of DTOs      | `Collection::class . ':' . CommentDTO::class`     | Cast to a Laravel Collection            |
+| Date casting            | `Carbon::class`                                   | Cast to Carbon/DateTime instance        |
+| BackedEnum              | `StatusEnum::class`                               | Cast a raw value to a BackedEnum        |
+| Array of Enums          | `[TagEnum::class]`                                | Cast to array of BackedEnum instances   |
+| Collection of Enums     | `Collection::class . ':' . PriorityEnum::class`   | Cast to a Collection of BackedEnums     |
+
+### BackedEnum Casting
+
+PHP `BackedEnum` types are automatically detected and cast using `Enum::from()`. Existing enum instances are passed through unchanged. On serialization, enums are converted back to their backing value.
+
+```php
+use App\Enums\StatusEnum; // enum StatusEnum: string { case Active = 'active'; ... }
+
+class TaskDTO extends ArgonautDTO
+{
+    public ?StatusEnum $status = null;
+
+    protected array $casts = [
+        'status' => StatusEnum::class,
+    ];
+}
+
+$task = new TaskDTO(['status' => 'active']);
+$task->status;              // StatusEnum::Active
+$task->toArray()['status']; // 'active'
+```
 
 ---
 
@@ -652,6 +678,62 @@ Serialize DTOs for output, API responses, etc.
 $userDTO->toArray(); // Recursively converts nested DTOs
 $userDTO->toJson();  // JSON output (throws on encoding errors)
 ```
+
+### Partial Serialization
+
+Use `only()` and `except()` to serialize a subset of properties:
+
+```php
+$user = new UserDTO([
+    'username' => 'jdoe',
+    'email' => 'jdoe@example.com',
+    'firstName' => 'John',
+    'lastName' => 'Doe',
+]);
+
+$user->only('username', 'email');
+// ['username' => 'jdoe', 'email' => 'jdoe@example.com']
+
+$user->except('email');
+// ['username' => 'jdoe', 'firstName' => 'John', 'lastName' => 'Doe', ...]
+```
+
+---
+
+## 🔄 Merging Attributes
+
+Mutable DTOs support merging additional attributes after construction:
+
+```php
+$user = new UserDTO(['email' => 'old@example.com', 'firstName' => 'John']);
+
+$user->merge(['email' => 'new@example.com']);
+
+$user->email;     // 'new@example.com'
+$user->firstName;  // 'John' (unchanged)
+```
+
+`merge()` returns the same instance, so it can be chained:
+
+```php
+$user->merge(['firstName' => 'Jane'])->merge(['lastName' => 'Doe']);
+```
+
+> **Note**: `merge()` is only available on `ArgonautDTO`. Immutable DTOs do not support post-construction modification.
+
+---
+
+## 🧩 Trait-Based Architecture
+
+Under the hood, both `ArgonautDTO` and `ArgonautImmutableDTO` compose shared behavior from three traits:
+
+| Trait | Provides |
+|-------|----------|
+| `HasCasting` | `castInputValue()`, enum/DTO/collection/date casting |
+| `HasSerialization` | `toArray()`, `toJson()`, `only()`, `except()`, `collection()` |
+| `HasValidation` | `validate()`, `isValid()` |
+
+This is transparent to most users, but if you are extending internal behavior (e.g., overriding `castInputValue()` in a subclass), note that these methods now live in traits rather than directly on the base class. Method resolution is identical for inheritance purposes.
 
 ---
 
