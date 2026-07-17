@@ -3,6 +3,7 @@
 namespace YorCreative\LaravelArgonautDTO\Traits;
 
 use Illuminate\Support\Collection;
+use JsonException;
 use RuntimeException;
 use YorCreative\LaravelArgonautDTO\ArgonautDTOContract;
 
@@ -75,13 +76,11 @@ trait HasSerialization
      */
     public function toJson($options = 0): string
     {
-        $json = json_encode($this->toArray(), $options);
-
-        if (json_last_error() === JSON_ERROR_NONE) {
-            return $json;
+        try {
+            return json_encode($this->toArray(), $options | JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new RuntimeException('JSON error: '.$e->getMessage(), 0, $e);
         }
-
-        throw new RuntimeException('JSON error: '.json_last_error_msg());
     }
 
     /**

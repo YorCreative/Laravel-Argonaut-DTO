@@ -3,9 +3,11 @@
 namespace YorCreative\LaravelArgonautDTO\Traits;
 
 use DateTimeInterface;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use Traversable;
 
 trait HasCasting
 {
@@ -81,18 +83,16 @@ trait HasCasting
      * Casts an array of values to a collection of a specified model.
      *
      * @param  string  $cast  The casting directive, containing the class name to which the items should be cast.
-     * @param  string|array  $value  The value to be cast, expected to be an array.
+     * @param  mixed  $value  The value to be cast, expected to be an iterable.
      * @return Collection A collection of items cast to the specified class.
      *
      * @throws InvalidArgumentException If the provided value is not an array.
      */
-    protected function castToCollectionModel(string $cast, string|array $value): Collection
+    protected function castToCollectionModel(string $cast, mixed $value): Collection
     {
         [$_, $class] = explode(':', $cast, 2);
 
-        if (gettype($value) !== 'array') {
-            throw new InvalidArgumentException("$value must be an array to cast to a collection.");
-        }
+        $value = $this->normalizeIterableValue($value, 'collection');
 
         return collect($value)->map(fn ($item) => $item instanceof $class
             ? $item
@@ -103,11 +103,13 @@ trait HasCasting
      * Converts an array of items into an array of model instances of the specified class.
      *
      * @param  string  $class  The fully qualified class name of the model to cast items to.
-     * @param  array  $value  The array of items to cast into instances of the specified class.
+     * @param  mixed  $value  The iterable of items to cast into instances of the specified class.
      * @return array An array of instances of the specified class.
      */
-    protected function castToArrayOfModels(string $class, array $value): array
+    protected function castToArrayOfModels(string $class, mixed $value): array
     {
+        $value = $this->normalizeIterableValue($value, 'array');
+
         return array_map(fn ($item) => $item instanceof $class
             ? $item
             : (is_subclass_of($class, \BackedEnum::class) ? $class::from($item) : new $class($item)), $value);
@@ -143,5 +145,32 @@ trait HasCasting
         }
 
         return $enumClass::from($value);
+    }
+
+    /**
+     * Normalize common iterable inputs to arrays for casting helpers.
+     *
+     * @throws InvalidArgumentException
+     */
+    protected function normalizeIterableValue(mixed $value, string $target): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if ($value instanceof Collection) {
+            return $value->all();
+        }
+
+        if ($value instanceof Arrayable) {
+            return $value->toArray();
+        }
+
+        if ($value instanceof Traversable) {
+            return iterator_to_array($value);
+        }
+
+        $type = get_debug_type($value);
+        throw new InvalidArgumentException("{$type} must be iterable to cast to {$target}.");
     }
 }
