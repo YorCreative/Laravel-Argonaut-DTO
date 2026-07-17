@@ -2,6 +2,7 @@
 
 namespace YorCreative\LaravelArgonautDTO\Tests\Unit;
 
+use ArrayIterator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -79,6 +80,36 @@ class DTOTest extends TestCase
         $this->assertInstanceOf(ProductReviewDTO::class, $product->reviews[1]);
         $this->assertInstanceOf(Carbon::class, $product->reviews[1]->createdAt);
         $this->assertSame('2023-01-02', $product->reviews[1]->createdAt->toDateString());
+    }
+
+    public function test_casts_collection_input_for_array_model_casts(): void
+    {
+        $product = new ProductDTO([
+            'title' => 'Desk',
+            'features' => collect([
+                ['name' => 'Foldable', 'description' => 'Folds with ease!'],
+            ]),
+        ]);
+
+        $this->assertIsArray($product->features);
+        $this->assertInstanceOf(ProductFeatureDTO::class, $product->features[0]);
+    }
+
+    public function test_casts_traversable_input_for_collection_model_casts(): void
+    {
+        $reviews = new ArrayIterator([
+            ['rating' => 5, 'comment' => 'Great!'],
+            ['rating' => 4, 'comment' => 'Good.'],
+        ]);
+
+        $product = new ProductDTO([
+            'title' => 'Desk',
+            'reviews' => $reviews,
+        ]);
+
+        $this->assertInstanceOf(Collection::class, $product->reviews);
+        $this->assertCount(2, $product->reviews);
+        $this->assertInstanceOf(ProductReviewDTO::class, $product->reviews->first());
     }
 
     public function test_serializes_to_array_and_json(): void
