@@ -28,6 +28,13 @@ structured DTOs (Data Transfer Objects), with built-in support for:
 
 ---
 
+## 📦 Requirements
+
+- PHP 8.2, 8.3, 8.4, or 8.5 (PHP 8.3+ when using Laravel 13)
+- Laravel 10.x, 11.x, 12.x, or 13.x
+
+---
+
 ## 📦 Installation
 
 Install via Composer:
