@@ -13,6 +13,9 @@ RUN pecl install xdebug \
 # Optional: Add Xdebug config (adjust path if needed)
 COPY ./xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
 
+# Raise memory_limit above the 128M default so PHPStan's parallel workers fit
+COPY ./php.ini /usr/local/etc/php/conf.d/zz-app.ini
+
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

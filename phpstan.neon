@@ -1,5 +1,10 @@
 parameters:
-    level: 5
+    level: 8
+    # $casts / $nestedAssemblers are declared by consumer subclasses as plain array
+    # literals, so their PHPDoc shapes describe intent, not a runtime guarantee.
+    # Keep them for inference without letting PHPStan call our defensive type
+    # guards redundant.
+    treatPhpDocTypesAsCertain: false
     paths:
         - src
     excludePaths:

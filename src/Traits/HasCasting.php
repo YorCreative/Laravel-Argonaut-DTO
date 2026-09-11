@@ -11,8 +11,16 @@ use Traversable;
 
 trait HasCasting
 {
+    /**
+     * Cast definitions keyed by property name. A value is either a class-string
+     * (single cast), a `Collection:<class-string>` directive, or a single-element
+     * array holding the target class-string (array-of-models cast).
+     *
+     * @var array<string, string|array<int, class-string>>
+     */
     protected array $casts = [];
 
+    /** @var array<string, class-string> */
     protected array $nestedAssemblers = [];
 
     /**
@@ -55,7 +63,7 @@ trait HasCasting
                             return (is_array($item) || is_object($item)) ? $assemblerClass::assemble($item, $targetClass) : $item;
                         }, $value);
                     } elseif ($value instanceof Collection) {
-                        $value = $value->map(function ($item) use ($assemblerClass, $targetClass) {
+                        $value = $value->map(function ($item) use ($assemblerClass, $targetClass): mixed {
                             return (is_array($item) || is_object($item)) ? $assemblerClass::assemble($item, $targetClass) : $item;
                         })->all();
                     }
@@ -84,7 +92,7 @@ trait HasCasting
      *
      * @param  string  $cast  The casting directive, containing the class name to which the items should be cast.
      * @param  mixed  $value  The value to be cast, expected to be an iterable.
-     * @return Collection A collection of items cast to the specified class.
+     * @return Collection<array-key, mixed> A collection of items cast to the specified class.
      *
      * @throws InvalidArgumentException If the provided value is not an array.
      */
@@ -104,7 +112,7 @@ trait HasCasting
      *
      * @param  string  $class  The fully qualified class name of the model to cast items to.
      * @param  mixed  $value  The iterable of items to cast into instances of the specified class.
-     * @return array An array of instances of the specified class.
+     * @return array<array-key, mixed> An array of instances of the specified class.
      */
     protected function castToArrayOfModels(string $class, mixed $value): array
     {
@@ -134,7 +142,7 @@ trait HasCasting
     /**
      * Casts a value to a BackedEnum instance.
      *
-     * @param  string  $enumClass  The fully qualified BackedEnum class name.
+     * @param  class-string<\BackedEnum>  $enumClass  The fully qualified BackedEnum class name.
      * @param  mixed  $value  The value to cast.
      * @return \BackedEnum The enum instance.
      */
@@ -149,6 +157,8 @@ trait HasCasting
 
     /**
      * Normalize common iterable inputs to arrays for casting helpers.
+     *
+     * @return array<array-key, mixed> The normalized value as a plain array.
      *
      * @throws InvalidArgumentException
      */

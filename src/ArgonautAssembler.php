@@ -5,6 +5,7 @@ namespace YorCreative\LaravelArgonautDTO;
 use BadFunctionCallException;
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\Collection as DatabaseCollection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use ReflectionException;
 use ReflectionMethod;
@@ -50,15 +51,17 @@ class ArgonautAssembler
      *
      * The result is a new `Illuminate\Support\Collection` containing the transformed items.
      *
-     * @param  Collection|DatabaseCollection  $items  The collection of items to be transformed. Each item will be
-     *                                                passed as the first argument to `static::assemble()`.
-     * @param  string  $transformedInputClass  The fully qualified class name of the target class to which each
-     *                                         item in the collection should be transformed (e.g., `\App\DTOs\UserDTO`).
+     * @template TTarget of object
+     *
+     * @param  Collection<array-key, mixed>|DatabaseCollection<array-key, Model>  $items  The collection of items to be transformed. Each item will be
+     *                                                                                    passed as the first argument to `static::assemble()`.
+     * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class to which each
+     *                                                        item in the collection should be transformed (e.g., `\App\DTOs\UserDTO`).
      * @param  self|null  $instance  An optional instance of the assembler (`static::class` or a subclass).
      *                               This is passed to `static::assemble()` for each item and is required if
      *                               the resolved transformation method for `$transformedInputClass` is non-static.
-     * @return Collection A new `Illuminate\Support\Collection` containing an instance of `$transformedInputClass`
-     *                    for each item from the input collection.
+     * @return Collection<array-key, TTarget> A new `Illuminate\Support\Collection` containing an instance of `$transformedInputClass`
+     *                                        for each item from the input collection.
      *
      * @throws ReflectionException Bubbled up from `static::assemble()` if the transformation method cannot be reflected.
      * @throws BadMethodCallException Bubbled up from `static::assemble()` if a non-static method is called without an instance.
@@ -79,15 +82,17 @@ class ArgonautAssembler
      *
      * The result is a new `Illuminate\Support\Collection` containing the transformed items.
      *
-     * @param  array  $items  The array of items to be transformed. Each item will be passed as the
-     *                        first argument to `static::assemble()`.
-     * @param  string  $transformedInputClass  The fully qualified class name of the target class to which each
-     *                                         item in the array should be transformed (e.g., `\App\DTOs\UserDTO`).
+     * @template TTarget of object
+     *
+     * @param  array<array-key, mixed>  $items  The array of items to be transformed. Each item will be passed as the
+     *                                          first argument to `static::assemble()`.
+     * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class to which each
+     *                                                        item in the array should be transformed (e.g., `\App\DTOs\UserDTO`).
      * @param  self|null  $instance  An optional instance of the assembler (`static::class` or a subclass).
      *                               This is passed to `static::assemble()` for each item and is required if
      *                               the resolved transformation method for `$transformedInputClass` is non-static.
-     * @return Collection A new `Illuminate\Support\Collection` containing an instance of `$transformedInputClass`
-     *                    for each item from the input array.
+     * @return Collection<array-key, TTarget> A new `Illuminate\Support\Collection` containing an instance of `$transformedInputClass`
+     *                                        for each item from the input array.
      *
      * @throws ReflectionException Bubbled up from `static::assemble()` if the transformation method cannot be reflected.
      * @throws BadMethodCallException Bubbled up from `static::assemble()` if a non-static method is called without an instance.
@@ -121,13 +126,15 @@ class ArgonautAssembler
      *     - If the method is non-static, it's called on the provided `$instance` (e.g., `$instance->toTargetDTO($objectInput)`).
      *       A `BadMethodCallException` is thrown if a non-static method is encountered, but no `$instance` is provided.
      *
-     * @param  object|array  $input  The input data to be transformed. If an array, it will be cast to an object.
-     * @param  string  $transformedInputClass  The fully qualified class name of the target class into which the input
-     *                                         should be transformed (e.g., `\App\DTOs\UserDTO`).
+     * @template TTarget of object
+     *
+     * @param  object|array<array-key, mixed>  $input  The input data to be transformed. If an array, it will be cast to an object.
+     * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class into which the input
+     *                                                        should be transformed (e.g., `\App\DTOs\UserDTO`).
      * @param  self|null  $instance  An optional instance of the assembler (`static::class` or a subclass). This is required
      *                               if the resolved transformation method is non-static. It can be `null` if the
      *                               transformation method is static.
-     * @return mixed An instance of `$transformedInputClass`, populated by the invoked transformation method.
+     * @return TTarget An instance of `$transformedInputClass`, populated by the invoked transformation method.
      *
      * @throws ReflectionException If the resolved transformation method does not exist on `static::class`,
      *                             is not accessible, or if `ReflectionMethod` fails for other reasons.
@@ -160,16 +167,18 @@ class ArgonautAssembler
      * and then delegates the actual transformation process to `static::assemble()`, passing along
      * the cast object, the target class name, and an optional assembler instance.
      *
-     * @param  array  $input  The associative array containing the data to be transformed. This array is
-     *                        cast to an (object) before being processed by `static::assemble()`.
-     * @param  string  $transformedInputClass  The fully qualified class name of the target class into which
-     *                                         the input array's data should be transformed (e.g., `\App\DTOs\UserDTO`).
+     * @template TTarget of object
+     *
+     * @param  array<array-key, mixed>  $input  The associative array containing the data to be transformed. This array is
+     *                                          cast to an (object) before being processed by `static::assemble()`.
+     * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class into which
+     *                                                        the input array's data should be transformed (e.g., `\App\DTOs\UserDTO`).
      * @param  self|null  $instance  An optional instance of the assembler (or a subclass of `ArgonautAssembler`).
      *                               This instance is passed to `static::assemble()` and is required if the resolved
      *                               transformation method (e.g., "toUserDTO") is non-static. If the transformation
      *                               method is static, this can be `null`.
-     * @return mixed An instance of `$transformedInputClass`, populated by the invoked transformation method
-     *               via `static::assemble()`.
+     * @return TTarget An instance of `$transformedInputClass`, populated by the invoked transformation method
+     *                 via `static::assemble()`.
      *
      * @throws ReflectionException If the resolved transformation method (within `static::assemble()`) cannot be
      *                             reflected upon (e.g., it doesn't exist or is not accessible).
@@ -232,12 +241,14 @@ class ArgonautAssembler
      * This is particularly useful when the resolved transformation method (e.g., `toUserDTO`)
      * is an instance method and requires access to the assembler's instance properties or methods.
      *
-     * @param  object|array  $input  The input data to be transformed. If an array, `static::assemble` will cast it to an object.
-     * @param  string  $transformedInputClass  The fully qualified class name of the target class into which the input
-     *                                         should be transformed.
-     * @return mixed An instance of `$transformedInputClass`, populated by the invoked transformation method
-     *               via `static::assemble()`. The transformation method might be static or an instance method
-     *               called on the current object (`$this`).
+     * @template TTarget of object
+     *
+     * @param  object|array<array-key, mixed>  $input  The input data to be transformed. If an array, `static::assemble` will cast it to an object.
+     * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class into which the input
+     *                                                        should be transformed.
+     * @return TTarget An instance of `$transformedInputClass`, populated by the invoked transformation method
+     *                 via `static::assemble()`. The transformation method might be static or an instance method
+     *                 called on the current object (`$this`).
      *
      * @throws ReflectionException If the resolved transformation method (within `static::assemble()`) cannot be reflected upon.
      * @throws BadMethodCallException If a non-static transformation method is resolved (within `static::assemble()`)

@@ -39,7 +39,7 @@ abstract class ArgonautImmutableDTO implements ArgonautDTOContract
     /**
      * Creates a new immutable DTO instance from the given attributes.
      *
-     * @param  array  $attributes  An associative array of attributes to initialize the DTO with.
+     * @param  array<string, mixed>  $attributes  An associative array of attributes to initialize the DTO with.
      */
     public function __construct(array $attributes)
     {
@@ -52,7 +52,7 @@ abstract class ArgonautImmutableDTO implements ArgonautDTOContract
      * This method iterates through the attributes, applies casting where defined,
      * and uses reflection to set readonly properties during construction.
      *
-     * @param  array  $attributes  The attributes to initialize properties from.
+     * @param  array<string, mixed>  $attributes  The attributes to initialize properties from.
      */
     protected function initializeFromAttributes(array $attributes): void
     {
