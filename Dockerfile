@@ -11,7 +11,10 @@ RUN pecl install xdebug \
     && docker-php-ext-enable xdebug
 
 # Optional: Add Xdebug config (adjust path if needed)
-COPY ./xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY ./docker/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+
+# Raise memory_limit above the 128M default so PHPStan's parallel workers fit
+COPY ./docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 
 
 # Get latest Composer

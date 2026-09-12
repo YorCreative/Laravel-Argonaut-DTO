@@ -50,7 +50,7 @@ trait HasSerialization
      * Converts the current object into an array, optionally with a specified depth for nested structures.
      *
      * @param  int  $depth  The maximum depth to process when converting nested structures. Defaults to 3. A depth of 0 or less will return an empty array.
-     * @return array An array representation of the current object, respecting the specified depth.
+     * @return array<string, mixed> An array representation of the current object, respecting the specified depth.
      */
     public function toArray(int $depth = 3): array
     {
@@ -87,7 +87,7 @@ trait HasSerialization
      * Serialize only the specified properties.
      *
      * @param  string  ...$keys  Property names to include.
-     * @return array Filtered array containing only the specified keys.
+     * @return array<string, mixed> Filtered array containing only the specified keys.
      */
     public function only(string ...$keys): array
     {
@@ -98,7 +98,7 @@ trait HasSerialization
      * Serialize all properties except the specified ones.
      *
      * @param  string  ...$keys  Property names to exclude.
-     * @return array Filtered array excluding the specified keys.
+     * @return array<string, mixed> Filtered array excluding the specified keys.
      */
     public function except(string ...$keys): array
     {
@@ -108,8 +108,8 @@ trait HasSerialization
     /**
      * Creates a collection of instances of the static class from an array of items.
      *
-     * @param  array  $items  An array of items to be converted into a collection of instances.
-     * @return Collection A collection of instances of the static class.
+     * @param  array<array-key, array<string, mixed>>  $items  An array of items to be converted into a collection of instances.
+     * @return Collection<array-key, static> A collection of instances of the static class.
      */
     public static function collection(array $items = []): Collection
     {

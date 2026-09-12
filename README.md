@@ -33,6 +33,25 @@ structured DTOs (Data Transfer Objects), with built-in support for:
 - PHP 8.2, 8.3, 8.4, or 8.5 (PHP 8.3+ when using Laravel 13)
 - Laravel 10.x, 11.x, 12.x, or 13.x
 
+### Support matrix
+
+The `composer.json` constraint still permits Laravel 10.x and 11.x, but only the
+versions marked **Tested** below are exercised in CI on every commit:
+
+| Laravel | PHP | Status |
+| --- | --- | --- |
+| 13.x | 8.3, 8.4, 8.5 | ✅ Tested in CI |
+| 12.x | 8.2, 8.3, 8.4, 8.5 | ✅ Tested in CI |
+| 11.x | 8.2 – 8.4 | ⚠️ Best effort — installable, not covered by CI |
+| 10.x | 8.2, 8.3 | ⚠️ Best effort — installable, not covered by CI |
+
+Laravel 10 and 11 are past their active-support windows, so their CI jobs were
+retired. The package is expected to keep working on them and the constraint is
+deliberately left open, but regressions there will not be caught automatically.
+If you depend on Laravel 10.x or 11.x, pin your own test coverage accordingly
+and please open an issue if something breaks — support may be dropped in a
+future major release.
+
 ---
 
 ## 📦 Installation

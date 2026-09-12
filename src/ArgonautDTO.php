@@ -14,8 +14,12 @@ class ArgonautDTO implements ArgonautDTOContract
     use HasSerialization;
     use HasValidation;
 
+    /** @var list<string> */
     protected array $prioritizedAttributes = [];
 
+    /**
+     * @param  array<string, mixed>  $attributes  An associative array of attributes to set.
+     */
     public function __construct(array $attributes)
     {
         $this->setAttributes($attributes);
@@ -24,7 +28,7 @@ class ArgonautDTO implements ArgonautDTOContract
     /**
      * Sets multiple attributes on the object, prioritizing specific keys if present.
      *
-     * @param  array  $attributes  An associative array of attributes to set, where keys represent attribute names and values represent their corresponding values.
+     * @param  array<string, mixed>  $attributes  An associative array of attributes to set, where keys represent attribute names and values represent their corresponding values.
      * @return static The current instance with the updated attributes.
      */
     public function setAttributes(array $attributes): static
@@ -65,7 +69,7 @@ class ArgonautDTO implements ArgonautDTOContract
     /**
      * Merge the given attributes into this DTO, updating existing values.
      *
-     * @param  array  $attributes  Associative array of attributes to merge.
+     * @param  array<string, mixed>  $attributes  Associative array of attributes to merge.
      * @return static The current instance with updated attributes.
      */
     public function merge(array $attributes): static
@@ -78,7 +82,7 @@ class ArgonautDTO implements ArgonautDTOContract
     /**
      * Retrieves the attributes of the object that should be updated, excluding specific properties.
      *
-     * @return array The filtered attributes to update.
+     * @return array<string, mixed> The filtered attributes to update.
      */
     public function getAttributesToUpdate(): array
     {

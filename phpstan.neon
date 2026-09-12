@@ -1,5 +1,5 @@
 parameters:
-    level: 5
+    level: 8
     paths:
         - src
     excludePaths:
@@ -9,3 +9,11 @@ parameters:
         - '#Method Illuminate\\Contracts\\Support\\Arrayable.*::toArray\(\) invoked with 1 parameter, 0 required#'
         # Using new static() is a common Laravel pattern for DTOs
         - '#Unsafe usage of new static\(\)#'
+        # $casts is declared by consumer subclasses as a plain array literal, so the
+        # @var shape on it describes intent, not a runtime guarantee. Keep the shape
+        # for inference, but do not let it mark this defensive guard redundant.
+        # Scoped to this one call so alreadyNarrowedType stays active everywhere else.
+        -
+            message: '#Call to function is_array\(\) with array<int, class-string> will always evaluate to true#'
+            path: src/Traits/HasCasting.php
+            count: 1

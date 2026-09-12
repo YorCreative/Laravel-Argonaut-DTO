@@ -36,7 +36,7 @@ trait HasValidation
      * @param  bool  $throw  Determines whether to throw an exception on validation failure.
      *                       If true, a ValidationException is thrown upon failure;
      *                       if false, validation errors are returned as an array.
-     * @return bool|array Returns true if validation succeeds. Returns an array of validation errors if validation fails and $throw is false.
+     * @return bool|array<string, array<int, string>> Returns true if validation succeeds. Returns an array of validation errors if validation fails and $throw is false.
      *
      * @throws LogicException If the class does not implement a rules() method for validation.
      * @throws ValidationException If validation fails and $throw is true.
