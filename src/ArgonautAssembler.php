@@ -4,8 +4,6 @@ namespace YorCreative\LaravelArgonautDTO;
 
 use BadFunctionCallException;
 use BadMethodCallException;
-use Illuminate\Database\Eloquent\Collection as DatabaseCollection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use ReflectionException;
 use ReflectionMethod;
@@ -53,8 +51,10 @@ class ArgonautAssembler
      *
      * @template TTarget of object
      *
-     * @param  Collection<array-key, mixed>|DatabaseCollection<array-key, Model>  $items  The collection of items to be transformed. Each item will be
-     *                                                                                    passed as the first argument to `static::assemble()`.
+     * @param  Collection<array-key, mixed>  $items  The collection of items to be transformed. Each item will be
+     *                                               passed as the first argument to `static::assemble()`.
+     *                                               An Eloquent collection is accepted as-is, since
+     *                                               `Illuminate\Database\Eloquent\Collection` extends this type.
      * @param  class-string<TTarget>  $transformedInputClass  The fully qualified class name of the target class to which each
      *                                                        item in the collection should be transformed (e.g., `\App\DTOs\UserDTO`).
      * @param  self|null  $instance  An optional instance of the assembler (`static::class` or a subclass).
@@ -67,7 +67,7 @@ class ArgonautAssembler
      * @throws BadMethodCallException Bubbled up from `static::assemble()` if a non-static method is called without an instance.
      * @throws BadFunctionCallException Bubbled up from `static::assemble()` if the transformation method cannot be resolved by name.
      */
-    public static function fromCollection(Collection|DatabaseCollection $items, string $transformedInputClass, ?self $instance = null): Collection
+    public static function fromCollection(Collection $items, string $transformedInputClass, ?self $instance = null): Collection
     {
         return $items->map(fn (mixed $item) => static::assemble($item, $transformedInputClass, $instance));
     }
